@@ -1,0 +1,57 @@
+#!/sbin/runscript
+#
+#/***************************************************************************
+# *   Copyright (C) 2014 Daniel Mueller                                     *
+# *                                                                         *
+# *   This program is free software: you can redistribute it and/or modify  *
+# *   it under the terms of the GNU General Public License as published by  *
+# *   the Free Software Foundation, either version 3 of the License, or     *
+# *   (at your option) any later version.                                   *
+# *                                                                         *
+# *   This program is distributed in the hope that it will be useful,       *
+# *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+# *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+# *   GNU General Public License for more details.                          *
+# *                                                                         *
+# *   You should have received a copy of the GNU General Public License     *
+# *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
+# ***************************************************************************/
+#
+# $Header: Establish a reverse SSH tunnel.$
+
+
+SCRIPT_FILE=/run/sshrev.sh
+PID_FILE=/run/sshrev.pid
+
+depend() {
+  after dns dhcpcd net
+}
+
+start() {
+  # Note: for some reasons start-stop-daemon's --user option won't work here.
+  #       Probably because the environment stays the same or some ssh alias
+  #       issue. Be that as it may, we just switch the user within the script
+  #       ourselves. For some reasons (probably the same issue as above...)
+  #       --login won't work.
+  cat <<EOF > ${SCRIPT_FILE}
+#!/bin/sh
+(su deso --command="ssh rev -o LogLevel=QUIET -N") &
+sleep 1
+echo \$! > ${PID_FILE}
+EOF
+  chmod u+x ${SCRIPT_FILE}
+
+  ebegin "Establishing reverse ssh tunnel..."
+  start-stop-daemon --start --exec ${SCRIPT_FILE}\
+    --pidfile ${PID_FILE} --name sshrev
+  eend $?
+
+  rm ${SCRIPT_FILE}
+}
+
+stop() {
+  ebegin "Tearing down reverse ssh tunnel..."
+  kill "$(< ${PID_FILE})"
+  # Always successful.
+  eend 0
+}
