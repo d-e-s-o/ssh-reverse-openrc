@@ -21,7 +21,10 @@
 
 
 SCRIPT_FILE=/run/sshrev.sh
+COMMAND_FILE=/run/sshcommand.sh
 PID_FILE=/run/sshrev.pid
+LOG_FILE=/var/log/sshrev.log
+USER=ssh
 
 depend() {
   after dns dhcpcd net
@@ -33,11 +36,21 @@ start() {
   #       issue. Be that as it may, we just switch the user within the script
   #       ourselves. For some reasons (probably the same issue as above...)
   #       --login won't work.
+  cat <<EOF > ${COMMAND_FILE}
+#!/bin/sh
+AUTOSSH_LOGFILE=${LOG_FILE} AUTOSSH_PIDFILE=${PID_FILE} autossh -M 0 -f rev -N
+EOF
+  chown ${USER} ${COMMAND_FILE}
+  chmod u+x ${COMMAND_FILE}
+
   cat <<EOF > ${SCRIPT_FILE}
 #!/bin/sh
-(su deso --command="ssh rev -o LogLevel=QUIET -N") &
-sleep 1
-echo \$! > ${PID_FILE}
+touch ${LOG_FILE}
+touch ${PID_FILE}
+chown ${USER} ${LOG_FILE}
+chown ${USER} ${PID_FILE}
+
+su ${USER} --command="${COMMAND_FILE}"
 EOF
   chmod u+x ${SCRIPT_FILE}
 
@@ -47,6 +60,7 @@ EOF
   eend $?
 
   rm ${SCRIPT_FILE}
+  rm ${COMMAND_FILE}
 }
 
 stop() {
