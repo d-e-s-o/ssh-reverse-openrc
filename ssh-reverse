@@ -38,7 +38,7 @@ start() {
   #       --login won't work.
   cat <<EOF > ${COMMAND_FILE}
 #!/bin/sh
-AUTOSSH_LOGFILE=${LOG_FILE} AUTOSSH_PIDFILE=${PID_FILE} autossh -M 0 -f rev -N
+AUTOSSH_LOGLEVEL=6 AUTOSSH_LOGFILE=${LOG_FILE} AUTOSSH_PIDFILE=${PID_FILE} autossh -M 0 -f rev -N -o LogLevel=INFO -- -E ${LOG_FILE}
 EOF
   chown ${USER} ${COMMAND_FILE}
   chmod u+x ${COMMAND_FILE}
