@@ -1,7 +1,7 @@
 #!/sbin/runscript
 #
 #/***************************************************************************
-# *   Copyright (C) 2014 Daniel Mueller                                     *
+# *   Copyright (C) 2014,2017 Daniel Mueller                                *
 # *                                                                         *
 # *   This program is free software: you can redistribute it and/or modify  *
 # *   it under the terms of the GNU General Public License as published by  *
@@ -20,17 +20,43 @@
 # $Header: Establish a reverse SSH tunnel.$
 
 
-SCRIPT_FILE=/run/sshrev.sh
-COMMAND_FILE=/run/sshcommand.sh
-PID_FILE=/run/sshrev.pid
-LOG_FILE=/var/log/sshrev.log
+SCRIPT_FILE=/run/${RC_SVCNAME}.sh
+COMMAND_FILE=/run/${RC_SVCNAME}-command.sh
+PID_FILE=/run/${RC_SVCNAME}.pid
+LOG_FILE=/var/log/${RC_SVCNAME}.log
 USER=ssh
+
+
+error() {
+  local exit_code=${?}
+
+  eerror "$*"
+  return ${exit_code}
+}
 
 depend() {
   after dns dhcpcd net
 }
 
+check() {
+  if [ -z "${SSH_HOST}" ]; then
+    msg=$(cat <<EOF
+The following variables are required for ${RC_SVCNAME} to work:
+SSH_HOST: The SSH host to connect to.
+
+Please define them in ${conf}.
+EOF
+)
+    error "${msg}"
+    exit 1
+  fi
+}
+
 start() {
+  check
+
+  local host=${SSH_HOST}
+
   # Note: for some reasons start-stop-daemon's --user option won't work here.
   #       Probably because the environment stays the same or some ssh alias
   #       issue. Be that as it may, we just switch the user within the script
@@ -38,7 +64,7 @@ start() {
   #       --login won't work.
   cat <<EOF > ${COMMAND_FILE}
 #!/bin/sh
-AUTOSSH_LOGLEVEL=6 AUTOSSH_LOGFILE=${LOG_FILE} AUTOSSH_PIDFILE=${PID_FILE} autossh -M 0 -f rev -N -o LogLevel=INFO -- -E ${LOG_FILE}
+AUTOSSH_LOGLEVEL=6 AUTOSSH_LOGFILE=${LOG_FILE} AUTOSSH_PIDFILE=${PID_FILE} autossh -M 0 -f ${host} -N -o LogLevel=INFO -- -E ${LOG_FILE}
 EOF
   chown ${USER} ${COMMAND_FILE}
   chmod u+x ${COMMAND_FILE}
@@ -56,7 +82,7 @@ EOF
 
   ebegin "Establishing reverse ssh tunnel..."
   start-stop-daemon --start --exec ${SCRIPT_FILE}\
-    --pidfile ${PID_FILE} --name sshrev
+    --pidfile ${PID_FILE} --name ${RC_SVCNAME}
   eend $?
 
   rm ${SCRIPT_FILE}
