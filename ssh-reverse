@@ -24,7 +24,6 @@ SCRIPT_FILE=/run/${RC_SVCNAME}.sh
 COMMAND_FILE=/run/${RC_SVCNAME}-command.sh
 PID_FILE=/run/${RC_SVCNAME}.pid
 LOG_FILE=/var/log/${RC_SVCNAME}.log
-USER=ssh
 
 
 error() {
@@ -56,6 +55,8 @@ start() {
   check
 
   local host=${SSH_HOST}
+  # SSH_EXEC_USER is optional.
+  local user=${SSH_EXEC_USER:-"ssh"}
 
   # Note: for some reasons start-stop-daemon's --user option won't work here.
   #       Probably because the environment stays the same or some ssh alias
@@ -66,17 +67,17 @@ start() {
 #!/bin/sh
 AUTOSSH_LOGLEVEL=6 AUTOSSH_LOGFILE=${LOG_FILE} AUTOSSH_PIDFILE=${PID_FILE} autossh -M 0 -f ${host} -N -o LogLevel=INFO -- -E ${LOG_FILE}
 EOF
-  chown ${USER} ${COMMAND_FILE}
+  chown ${user} ${COMMAND_FILE}
   chmod u+x ${COMMAND_FILE}
 
   cat <<EOF > ${SCRIPT_FILE}
 #!/bin/sh
 touch ${LOG_FILE}
 touch ${PID_FILE}
-chown ${USER} ${LOG_FILE}
-chown ${USER} ${PID_FILE}
+chown ${user} ${LOG_FILE}
+chown ${user} ${PID_FILE}
 
-su ${USER} --command="${COMMAND_FILE}"
+su - ${user} --command="${COMMAND_FILE}"
 EOF
   chmod u+x ${SCRIPT_FILE}
 
