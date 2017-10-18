@@ -77,7 +77,7 @@ touch ${PID_FILE}
 chown ${user} ${LOG_FILE}
 chown ${user} ${PID_FILE}
 
-su - ${user} --command="${COMMAND_FILE}"
+/bin/su - ${user} --command="${COMMAND_FILE}"
 EOF
   chmod u+x ${SCRIPT_FILE}
 
