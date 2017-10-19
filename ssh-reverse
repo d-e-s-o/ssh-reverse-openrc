@@ -93,6 +93,8 @@ EOF
 stop() {
   ebegin "Tearing down reverse ssh tunnel..."
   kill $(cat ${PID_FILE})
+  # Make sure it's dead.
+  kill -9 $(cat ${PID_FILE}) 2> /dev/null
   rm ${PID_FILE}
   # Always successful.
   eend 0
