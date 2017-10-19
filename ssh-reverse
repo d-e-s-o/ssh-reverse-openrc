@@ -92,7 +92,7 @@ EOF
 
 stop() {
   ebegin "Tearing down reverse ssh tunnel..."
-  kill "$(< ${PID_FILE})"
+  kill $(cat ${PID_FILE})
   rm ${PID_FILE}
   # Always successful.
   eend 0
